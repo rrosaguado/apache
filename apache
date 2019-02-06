@@ -1,0 +1,70 @@
+#Pràctia apache2
+apt-get install apache2
+nano /var/www/index.html
+# configurar dns (si lo pide)
+nano /etc/bind/named.conf.local
+zone "rros.cat" {
+  type master;
+  notify no;
+  file "/etc/bind/db.rros.cat";
+}
+zone "1.168.192.in-addr.arpa"{
+  type master;
+  notify no;
+  file "/etc/bind/db.192";
+}
+nano /etc/bind/db.rros.cat
+;
+@   IN  NS  rros.cat.
+@   IN  A   192.168.1.1
+www IN  A   192.168.1.1
+josep IN  A 192.168.1.1
+nano /etc/bind/db.192
+@ IN  NS    rros.cat
+1 IN  PTR   www
+1 IN  PTR   josep
+
+nano /etc/apache2/apache2.conf
+ServerName www.rros.cat
+mkdir -p /var/www/josep.com/public_html/
+chown -R $USER:$USER /var/www/josep.com/public_html/
+chmod -R 777 /var/www
+cp /var/www/index.html /var/www/josep.com/public_html
+cp /etc/apache2/sites-available/000-default.com /etc/apache2/sites-available/josep.conf
+nano /etc/apache2/sites-available/josep.conf
+<VirtualHost *:80>
+  ServerAdmin admin@josep.com
+  ServerAlias josep.rros.cat
+  DocumentRoot /var/www/josep.com/public_html
+  ErroLog ${APACHE2_LOG_DIR}/error.log
+  CustomLog ${APACHE2_LOG_DIR}/access.log combined
+</VirtualHost>
+a2ensite josep.conf
+systemctl restart apache2
+nano /etc/apache2/sites-available/000-default.com
+Primera linea despres del VirtualHost
+NameVirtualHost 192.168.1.1
+systemctl restart apache2
+# Apache segur
+ãpt-get install apache2-utils
+apt-get install openssl
+sudo openssl genrsa -des3 -out server.key 4096
+openssl rsa -in server.key -out server.key.nosegura
+openssl req -new -key server.key -out server.csr
+openssl x509 -req -days 365 -in server.csr – signkey server.key – out server.crt
+mkdir /etc/apache2/ssl
+cp server.ctr /etc/apache2/ssl/server.ctr
+cp server.key /etc/apache2/ssl/server.key
+nano /etc/apache2/sites-available/josep.com.conf
+<VirtualHost *:443>
+  SSLEngine On
+  SSLCertificateFile /etc/apache2/ssl/server.crt
+  SSLCertificateKeyFile /etc/apache2/ssl/server.key
+  ServerAdmin admin@josep.com
+  ServerAlias josep.rros.cat
+  DocumentRoot /var/www/josep.com/public_html
+  ErroLog ${APACHE2_LOG_DIR}/error.log
+  CustomLog ${APACHE2_LOG_DIR}/access.log combined
+</VirtualHost>
+a2enmod ssl
+systemctl restart apache2
